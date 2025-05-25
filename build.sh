@@ -6,7 +6,7 @@ go install github.com/a-h/templ/cmd/templ@latest
 npm install
 
 echo "Generating Templ files..."
-~/go/bin/templ generate
+/opt/buildhome/go/bin/templ generate
 
 echo "Building CSS..."
 npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify
