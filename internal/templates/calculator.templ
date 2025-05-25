@@ -1,0 +1,229 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/rebelopsio/macro-calc/internal/calculator"
+)
+
+templ CalculatorForm() {
+	<div class="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+		<div class="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-6 md:p-8">
+			<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Calculate Your Daily Macros</h2>
+			
+			<form hx-post="/calculate" hx-target="#results" hx-swap="innerHTML" class="space-y-6" x-data="{ showAdvanced: false, unitSystem: 'metric' }">
+				<!-- Unit System Toggle -->
+				<div class="flex justify-center mb-6">
+					<div class="inline-flex rounded-lg border border-gray-300 dark:border-gray-600">
+						<button type="button" 
+							@click="unitSystem = 'metric'" 
+							:class="{ 'bg-army-green-600 text-white': unitSystem === 'metric', 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300': unitSystem !== 'metric' }"
+							class="px-4 py-2 rounded-l-lg font-medium transition-colors">
+							Metric
+						</button>
+						<button type="button" 
+							@click="unitSystem = 'imperial'" 
+							:class="{ 'bg-army-green-600 text-white': unitSystem === 'imperial', 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300': unitSystem !== 'imperial' }"
+							class="px-4 py-2 rounded-r-lg font-medium transition-colors">
+							Imperial
+						</button>
+					</div>
+				</div>
+				
+				<input type="hidden" name="unit_system" :value="unitSystem"/>
+				
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div>
+						<label for="sex" class="label">Biological Sex</label>
+						<select id="sex" name="sex" required class="input-field">
+							<option value="">Select...</option>
+							<option value="male">Male</option>
+							<option value="female">Female</option>
+						</select>
+					</div>
+					
+					<div>
+						<label for="age" class="label">Age</label>
+						<input type="number" id="age" name="age" required min="18" max="100" class="input-field" placeholder="25"/>
+					</div>
+					
+					<!-- Metric Height -->
+					<div x-show="unitSystem === 'metric'">
+						<label for="height" class="label">Height (cm)</label>
+						<input type="number" id="height" name="height" min="100" max="250" step="0.1" class="input-field" placeholder="175"/>
+					</div>
+					
+					<!-- Imperial Height -->
+					<div x-show="unitSystem === 'imperial'" class="grid grid-cols-2 gap-2">
+						<div>
+							<label for="feet" class="label">Height (ft)</label>
+							<input type="number" id="feet" name="feet" min="3" max="8" class="input-field" placeholder="5"/>
+						</div>
+						<div>
+							<label for="inches" class="label">Inches</label>
+							<input type="number" id="inches" name="inches" min="0" max="11" step="0.1" class="input-field" placeholder="10"/>
+						</div>
+					</div>
+					
+					<!-- Metric Weight -->
+					<div x-show="unitSystem === 'metric'">
+						<label for="weight" class="label">Weight (kg)</label>
+						<input type="number" id="weight" name="weight" min="30" max="300" step="0.1" class="input-field" placeholder="70"/>
+					</div>
+					
+					<!-- Imperial Weight -->
+					<div x-show="unitSystem === 'imperial'">
+						<label for="weight_lbs" class="label">Weight (lbs)</label>
+						<input type="number" id="weight_lbs" name="weight_lbs" min="66" max="660" step="0.1" class="input-field" placeholder="154"/>
+					</div>
+				</div>
+				
+				<div>
+					<label for="activity" class="label">Activity Level</label>
+					<select id="activity" name="activity" required class="input-field">
+						<option value="">Select...</option>
+						<option value="sedentary">Sedentary (little or no exercise)</option>
+						<option value="lightly_active">Lightly Active (exercise 1-3 days/week)</option>
+						<option value="moderately_active">Moderately Active (exercise 3-5 days/week)</option>
+						<option value="very_active">Very Active (exercise 6-7 days/week)</option>
+						<option value="extra_active">Extra Active (very intense exercise daily)</option>
+					</select>
+				</div>
+				
+				<div>
+					<label for="goal" class="label">Goal</label>
+					<select id="goal" name="goal" required class="input-field">
+						<option value="">Select...</option>
+						<option value="lose">Lose Weight</option>
+						<option value="maintain">Maintain Weight</option>
+						<option value="gain">Gain Weight</option>
+					</select>
+				</div>
+				
+				<div class="flex items-center">
+					<input type="checkbox" id="advanced" name="advanced" x-model="showAdvanced" class="h-4 w-4 text-army-green-600 focus:ring-army-green-500 border-gray-300 rounded"/>
+					<label for="advanced" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+						Show advanced weekly options
+					</label>
+				</div>
+				
+				<div x-show="showAdvanced" x-transition class="space-y-4 border-t pt-4">
+					<h3 class="font-semibold text-gray-900 dark:text-white">Weekly Activity Schedule</h3>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						@WeekdayActivity("Monday")
+						@WeekdayActivity("Tuesday")
+						@WeekdayActivity("Wednesday")
+						@WeekdayActivity("Thursday")
+						@WeekdayActivity("Friday")
+						@WeekdayActivity("Saturday")
+						@WeekdayActivity("Sunday")
+					</div>
+				</div>
+				
+				<div class="flex justify-center">
+					<button type="submit" class="btn-primary w-full md:w-auto">
+						Calculate Macros
+					</button>
+				</div>
+			</form>
+			
+			<div id="results" class="mt-8"></div>
+		</div>
+	</div>
+}
+
+templ WeekdayActivity(day string) {
+	<div>
+		<label for={ fmt.Sprintf("%s-activity", day) } class="label">{ day }</label>
+		<select id={ fmt.Sprintf("%s-activity", day) } name={ fmt.Sprintf("%s-activity", day) } class="input-field">
+			<option value="">Use default</option>
+			<option value="sedentary">Sedentary</option>
+			<option value="lightly_active">Lightly Active</option>
+			<option value="moderately_active">Moderately Active</option>
+			<option value="very_active">Very Active</option>
+			<option value="extra_active">Extra Active</option>
+		</select>
+	</div>
+}
+
+templ MacroResults(result calculator.MacroResult) {
+	<div class="bg-army-green-50 dark:bg-gray-700 rounded-lg p-6">
+		<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your Daily Macros</h3>
+		
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+			<div class="bg-white dark:bg-gray-600 rounded-lg p-4">
+				<p class="text-sm text-gray-600 dark:text-gray-300">Calories</p>
+				<p class="text-2xl font-bold text-army-green-600 dark:text-army-green-400">{ fmt.Sprintf("%.0f", result.Calories) }</p>
+			</div>
+			<div class="bg-white dark:bg-gray-600 rounded-lg p-4">
+				<p class="text-sm text-gray-600 dark:text-gray-300">Protein</p>
+				<p class="text-2xl font-bold text-army-green-600 dark:text-army-green-400">{ fmt.Sprintf("%.0fg", result.ProteinGrams) }</p>
+			</div>
+			<div class="bg-white dark:bg-gray-600 rounded-lg p-4">
+				<p class="text-sm text-gray-600 dark:text-gray-300">Carbs</p>
+				<p class="text-2xl font-bold text-army-green-600 dark:text-army-green-400">{ fmt.Sprintf("%.0fg", result.CarbsGrams) }</p>
+			</div>
+			<div class="bg-white dark:bg-gray-600 rounded-lg p-4">
+				<p class="text-sm text-gray-600 dark:text-gray-300">Fat</p>
+				<p class="text-2xl font-bold text-army-green-600 dark:text-army-green-400">{ fmt.Sprintf("%.0fg", result.FatGrams) }</p>
+			</div>
+		</div>
+		
+		<div class="mt-4 text-sm text-gray-600 dark:text-gray-300">
+			<p>BMR: { fmt.Sprintf("%.0f", result.BMR) } calories</p>
+			<p>TDEE: { fmt.Sprintf("%.0f", result.TDEE) } calories</p>
+		</div>
+	</div>
+}
+
+templ WeeklyMacroResults(result calculator.WeeklyMacroResult) {
+	<div class="bg-army-green-50 dark:bg-gray-700 rounded-lg p-6">
+		<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your Weekly Macros</h3>
+		
+		<div class="mb-6">
+			<h4 class="font-medium text-gray-900 dark:text-white mb-2">Weekly Average</h4>
+			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+				<div class="bg-white dark:bg-gray-600 rounded-lg p-3">
+					<p class="text-xs text-gray-600 dark:text-gray-300">Calories</p>
+					<p class="text-xl font-bold text-army-green-600 dark:text-army-green-400">{ fmt.Sprintf("%.0f", result.Average.Calories) }</p>
+				</div>
+				<div class="bg-white dark:bg-gray-600 rounded-lg p-3">
+					<p class="text-xs text-gray-600 dark:text-gray-300">Protein</p>
+					<p class="text-xl font-bold text-army-green-600 dark:text-army-green-400">{ fmt.Sprintf("%.0fg", result.Average.ProteinGrams) }</p>
+				</div>
+				<div class="bg-white dark:bg-gray-600 rounded-lg p-3">
+					<p class="text-xs text-gray-600 dark:text-gray-300">Carbs</p>
+					<p class="text-xl font-bold text-army-green-600 dark:text-army-green-400">{ fmt.Sprintf("%.0fg", result.Average.CarbsGrams) }</p>
+				</div>
+				<div class="bg-white dark:bg-gray-600 rounded-lg p-3">
+					<p class="text-xs text-gray-600 dark:text-gray-300">Fat</p>
+					<p class="text-xl font-bold text-army-green-600 dark:text-army-green-400">{ fmt.Sprintf("%.0fg", result.Average.FatGrams) }</p>
+				</div>
+			</div>
+		</div>
+		
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead>
+					<tr class="border-b dark:border-gray-600">
+						<th class="text-left py-2 px-3 text-gray-700 dark:text-gray-300">Day</th>
+						<th class="text-center py-2 px-3 text-gray-700 dark:text-gray-300">Calories</th>
+						<th class="text-center py-2 px-3 text-gray-700 dark:text-gray-300">Protein</th>
+						<th class="text-center py-2 px-3 text-gray-700 dark:text-gray-300">Carbs</th>
+						<th class="text-center py-2 px-3 text-gray-700 dark:text-gray-300">Fat</th>
+					</tr>
+				</thead>
+				<tbody>
+					for day, macros := range result.DailyMacros {
+						<tr class="border-b dark:border-gray-600">
+							<td class="py-2 px-3 text-gray-900 dark:text-white">{ day }</td>
+							<td class="text-center py-2 px-3 text-gray-700 dark:text-gray-300">{ fmt.Sprintf("%.0f", macros.Calories) }</td>
+							<td class="text-center py-2 px-3 text-gray-700 dark:text-gray-300">{ fmt.Sprintf("%.0f", macros.ProteinGrams) }g</td>
+							<td class="text-center py-2 px-3 text-gray-700 dark:text-gray-300">{ fmt.Sprintf("%.0f", macros.CarbsGrams) }g</td>
+							<td class="text-center py-2 px-3 text-gray-700 dark:text-gray-300">{ fmt.Sprintf("%.0f", macros.FatGrams) }g</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+}
