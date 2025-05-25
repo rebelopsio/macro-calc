@@ -7,9 +7,16 @@
   GO_VERSION = "1.21"
 
 [[redirects]]
-  from = "/static/*"
-  to = "/static/:splat"
+  from = "/css/*"
+  to = "/css/:splat"
   status = 200
+  force = true
+
+[[redirects]]
+  from = "/js/*"
+  to = "/js/:splat"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
