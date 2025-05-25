@@ -2,11 +2,10 @@
 set -e
 
 echo "Installing dependencies..."
-go install github.com/a-h/templ/cmd/templ@latest
 npm install
 
 echo "Generating Templ files..."
-/opt/buildhome/go/bin/templ generate
+go run github.com/a-h/templ/cmd/templ@latest generate
 
 echo "Building CSS..."
 npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify
