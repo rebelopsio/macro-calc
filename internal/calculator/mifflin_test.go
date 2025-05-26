@@ -66,6 +66,30 @@ func TestCalculateTDEE(t *testing.T) {
 	}
 }
 
+func TestRoundToNearest5(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    float64
+		expected float64
+	}{
+		{"211 rounds to 210", 211, 210},
+		{"213 rounds to 215", 213, 215},
+		{"215 stays 215", 215, 215},
+		{"217.5 rounds to 220", 217.5, 220},
+		{"212.4 rounds to 210", 212.4, 210},
+		{"212.5 rounds to 215", 212.5, 215},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := roundToNearest5(tt.input)
+			if result != tt.expected {
+				t.Errorf("roundToNearest5(%v) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestCalculateDailyMacros(t *testing.T) {
 	input := DailyInput{
 		Sex:           Male,
@@ -74,6 +98,7 @@ func TestCalculateDailyMacros(t *testing.T) {
 		WeightKG:      80,
 		ActivityLevel: ModeratelyActive,
 		Goal:          Maintain,
+		DietType:      Standard,
 	}
 
 	result := CalculateDailyMacros(input)
@@ -91,10 +116,76 @@ func TestCalculateDailyMacros(t *testing.T) {
 		t.Errorf("Protein seems unreasonable: %v", result.ProteinGrams)
 	}
 
+	// Check that all macros are rounded to nearest 5
+	if int(result.ProteinGrams)%5 != 0 {
+		t.Errorf("Protein not rounded to nearest 5: %v", result.ProteinGrams)
+	}
+	if int(result.CarbsGrams)%5 != 0 {
+		t.Errorf("Carbs not rounded to nearest 5: %v", result.CarbsGrams)
+	}
+	if int(result.FatGrams)%5 != 0 {
+		t.Errorf("Fat not rounded to nearest 5: %v", result.FatGrams)
+	}
+
 	// Check that macros add up to approximately the total calories
 	macroCalories := (result.ProteinGrams * 4) + (result.CarbsGrams * 4) + (result.FatGrams * 9)
-	if math.Abs(macroCalories-result.Calories) > 10 {
+	if math.Abs(macroCalories-result.Calories) > 50 { // Increased tolerance due to rounding
 		t.Errorf("Macros don't add up to total calories: %v vs %v", macroCalories, result.Calories)
+	}
+}
+
+func TestDietTypeMacros(t *testing.T) {
+	baseInput := DailyInput{
+		Sex:           Male,
+		Age:           30,
+		HeightCM:      180,
+		WeightKG:      80,
+		ActivityLevel: ModeratelyActive,
+		Goal:          Maintain,
+	}
+
+	tests := []struct {
+		name            string
+		dietType        DietType
+		expectedCarbPct float64
+		expectedFatPct  float64
+		maxCarbs        float64
+	}{
+		{"Keto", Keto, 0.05, 0.75, 50},
+		{"Paleo", Paleo, 0.20, 0.50, 999},
+		{"Zone", Zone, 0.40, 0.30, 999},
+		{"Low Fat", LowFat, 0.55, 0.15, 999},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := baseInput
+			input.DietType = tt.dietType
+			result := CalculateDailyMacros(input)
+
+			// Calculate actual percentages
+			totalCalories := result.Calories
+			carbCalories := result.CarbsGrams * 4
+			fatCalories := result.FatGrams * 9
+			
+			carbPct := carbCalories / totalCalories
+			fatPct := fatCalories / totalCalories
+
+			// Check carb percentage (with tolerance for rounding)
+			if math.Abs(carbPct-tt.expectedCarbPct) > 0.05 {
+				t.Errorf("%s: Carb percentage = %.2f, want ~%.2f", tt.name, carbPct, tt.expectedCarbPct)
+			}
+
+			// Check fat percentage (with tolerance for rounding)
+			if math.Abs(fatPct-tt.expectedFatPct) > 0.05 {
+				t.Errorf("%s: Fat percentage = %.2f, want ~%.2f", tt.name, fatPct, tt.expectedFatPct)
+			}
+
+			// Check keto carb limit
+			if tt.dietType == Keto && result.CarbsGrams > tt.maxCarbs {
+				t.Errorf("Keto carbs = %.0f, want <= %.0f", result.CarbsGrams, tt.maxCarbs)
+			}
+		})
 	}
 }
 
@@ -107,6 +198,7 @@ func TestCalculateWeeklyMacros(t *testing.T) {
 			WeightKG:      65,
 			ActivityLevel: LightlyActive,
 			Goal:          Lose,
+			DietType:      Standard,
 		},
 		DailyActivities: map[string]ActivityLevel{
 			"Monday":    ModeratelyActive,

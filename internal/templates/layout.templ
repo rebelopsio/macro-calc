@@ -2,7 +2,18 @@ package templates
 
 templ Layout(title string) {
 	<!DOCTYPE html>
-	<html lang="en" class="h-full">
+	<html lang="en" class="h-full" x-data="{ 
+			darkMode: localStorage.getItem('darkMode') !== null 
+				? localStorage.getItem('darkMode') === 'true' 
+				: window.matchMedia('(prefers-color-scheme: dark)').matches 
+		}" x-init="
+			$watch('darkMode', val => localStorage.setItem('darkMode', val));
+			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+				if (localStorage.getItem('darkMode') === null) {
+					darkMode = e.matches;
+				}
+			});
+		" :class="{ 'dark': darkMode }">
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -10,8 +21,17 @@ templ Layout(title string) {
 			<link href="/css/output.css" rel="stylesheet"/>
 			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
 			<script src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js" defer></script>
+			<script>
+				// Apply dark mode immediately to prevent flash
+				const savedTheme = localStorage.getItem('darkMode');
+				const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				
+				if (savedTheme === 'true' || (savedTheme === null && prefersDark)) {
+					document.documentElement.classList.add('dark');
+				}
+			</script>
 		</head>
-		<body class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))" :class="{ 'dark': darkMode }">
+		<body class="h-full bg-white dark:bg-gray-900">
 			<div class="min-h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
 				<nav class="bg-army-green-600 dark:bg-army-green-800">
 					<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

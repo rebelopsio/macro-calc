@@ -29,6 +29,16 @@ const (
 	Gain     Goal = "gain"
 )
 
+type DietType string
+
+const (
+	Standard DietType = "standard"
+	Keto     DietType = "keto"
+	Paleo    DietType = "paleo"
+	Zone     DietType = "zone"
+	LowFat   DietType = "low_fat"
+)
+
 type DailyInput struct {
 	Sex           Sex
 	Age           int
@@ -36,6 +46,7 @@ type DailyInput struct {
 	WeightKG      float64
 	ActivityLevel ActivityLevel
 	Goal          Goal
+	DietType      DietType
 }
 
 type WeeklyInput struct {
@@ -95,6 +106,28 @@ func goalCalorieAdjustment(goal Goal) float64 {
 	}
 }
 
+// roundToNearest5 rounds a number to the nearest multiple of 5
+func roundToNearest5(x float64) float64 {
+	return math.Round(x/5) * 5
+}
+
+// dietMacroRatios returns protein, carb, and fat percentages for a given diet type
+func dietMacroRatios(diet DietType) (proteinPct, carbPct, fatPct float64) {
+	switch diet {
+	case Keto:
+		return 0.20, 0.05, 0.75
+	case Paleo:
+		return 0.30, 0.20, 0.50
+	case Zone:
+		return 0.30, 0.40, 0.30
+	case LowFat:
+		return 0.30, 0.55, 0.15
+	default: // Standard
+		// For standard diet, we'll return 0 to use the existing logic
+		return 0, 0, 0
+	}
+}
+
 func CalculateBMR(sex Sex, age int, heightCM, weightKG float64) float64 {
 	var bmr float64
 	
@@ -111,34 +144,58 @@ func CalculateTDEE(bmr float64, activityLevel ActivityLevel) float64 {
 	return bmr * activityMultiplier(activityLevel)
 }
 
-func CalculateMacros(tdee float64, goal Goal, weightKG float64) MacroResult {
+func CalculateMacros(tdee float64, goal Goal, weightKG float64, dietType DietType) MacroResult {
 	adjustedCalories := tdee + goalCalorieAdjustment(goal)
 	
-	// Protein: 0.8-1g per pound of body weight (1.8-2.2g per kg)
-	proteinMultiplier := 2.0
-	if goal == Gain {
-		proteinMultiplier = 2.2
-	}
-	proteinGrams := weightKG * proteinMultiplier
-	proteinCalories := proteinGrams * 4
+	proteinPct, carbPct, fatPct := dietMacroRatios(dietType)
 	
-	// Fat: 25-30% of total calories
-	fatPercentage := 0.25
-	if goal == Maintain {
-		fatPercentage = 0.30
-	}
-	fatCalories := adjustedCalories * fatPercentage
-	fatGrams := fatCalories / 9
+	var proteinGrams, carbsGrams, fatGrams float64
 	
-	// Carbs: Remaining calories
-	remainingCalories := adjustedCalories - proteinCalories - fatCalories
-	carbsGrams := remainingCalories / 4
+	if proteinPct > 0 { // Using diet-specific ratios
+		proteinCalories := adjustedCalories * proteinPct
+		proteinGrams = proteinCalories / 4
+		
+		carbCalories := adjustedCalories * carbPct
+		carbsGrams = carbCalories / 4
+		
+		fatCalories := adjustedCalories * fatPct
+		fatGrams = fatCalories / 9
+		
+		// For keto, ensure carbs don't exceed 50g even with percentages
+		if dietType == Keto && carbsGrams > 50 {
+			carbsGrams = 50
+			carbCalories = carbsGrams * 4
+			// Redistribute remaining calories to fat
+			remainingCalories := adjustedCalories - (proteinGrams * 4) - carbCalories
+			fatGrams = remainingCalories / 9
+		}
+	} else { // Standard diet - use existing logic
+		// Protein: 0.8-1g per pound of body weight (1.8-2.2g per kg)
+		proteinMultiplier := 2.0
+		if goal == Gain {
+			proteinMultiplier = 2.2
+		}
+		proteinGrams = weightKG * proteinMultiplier
+		proteinCalories := proteinGrams * 4
+		
+		// Fat: 25-30% of total calories
+		fatPercentage := 0.25
+		if goal == Maintain {
+			fatPercentage = 0.30
+		}
+		fatCalories := adjustedCalories * fatPercentage
+		fatGrams = fatCalories / 9
+		
+		// Carbs: Remaining calories
+		remainingCalories := adjustedCalories - proteinCalories - fatCalories
+		carbsGrams = remainingCalories / 4
+	}
 	
 	return MacroResult{
 		Calories:     math.Round(adjustedCalories),
-		ProteinGrams: math.Round(proteinGrams),
-		CarbsGrams:   math.Round(carbsGrams),
-		FatGrams:     math.Round(fatGrams),
+		ProteinGrams: roundToNearest5(proteinGrams),
+		CarbsGrams:   roundToNearest5(carbsGrams),
+		FatGrams:     roundToNearest5(fatGrams),
 		TDEE:         math.Round(tdee),
 	}
 }
@@ -146,7 +203,7 @@ func CalculateMacros(tdee float64, goal Goal, weightKG float64) MacroResult {
 func CalculateDailyMacros(input DailyInput) MacroResult {
 	bmr := CalculateBMR(input.Sex, input.Age, input.HeightCM, input.WeightKG)
 	tdee := CalculateTDEE(bmr, input.ActivityLevel)
-	result := CalculateMacros(tdee, input.Goal, input.WeightKG)
+	result := CalculateMacros(tdee, input.Goal, input.WeightKG, input.DietType)
 	result.BMR = math.Round(bmr)
 	return result
 }
@@ -168,7 +225,7 @@ func CalculateWeeklyMacros(input WeeklyInput) WeeklyMacroResult {
 		
 		bmr := CalculateBMR(input.Sex, input.Age, input.HeightCM, input.WeightKG)
 		tdee := CalculateTDEE(bmr, activityLevel)
-		macros := CalculateMacros(tdee, input.Goal, input.WeightKG)
+		macros := CalculateMacros(tdee, input.Goal, input.WeightKG, input.DietType)
 		macros.BMR = math.Round(bmr)
 		
 		result.DailyMacros[day] = macros
@@ -182,9 +239,9 @@ func CalculateWeeklyMacros(input WeeklyInput) WeeklyMacroResult {
 	// Calculate averages
 	result.Average = MacroResult{
 		Calories:     math.Round(totalCalories / 7),
-		ProteinGrams: math.Round(totalProtein / 7),
-		CarbsGrams:   math.Round(totalCarbs / 7),
-		FatGrams:     math.Round(totalFat / 7),
+		ProteinGrams: roundToNearest5(totalProtein / 7),
+		CarbsGrams:   roundToNearest5(totalCarbs / 7),
+		FatGrams:     roundToNearest5(totalFat / 7),
 	}
 	
 	return result

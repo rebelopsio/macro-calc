@@ -107,7 +107,21 @@ templ CalculatorForm() {
 				</div>
 				
 				<div x-show="showAdvanced" x-transition class="space-y-4 border-t pt-4">
-					<h3 class="font-semibold text-gray-900 dark:text-white">Weekly Activity Schedule</h3>
+					<h3 class="font-semibold text-gray-900 dark:text-white">Advanced Options</h3>
+					
+					<div>
+						<label for="diet_type" class="label">Diet Type</label>
+						<select id="diet_type" name="diet_type" class="input-field">
+							<option value="standard" selected>Standard (Balanced)</option>
+							<option value="keto">Keto (High Fat, Low Carb)</option>
+							<option value="paleo">Paleo (Moderate Carb)</option>
+							<option value="zone">Zone (40-30-30)</option>
+							<option value="low_fat">Low Fat (High Carb)</option>
+						</select>
+						<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Choose a diet type to adjust macro distribution</p>
+					</div>
+					
+					<h3 class="font-semibold text-gray-900 dark:text-white mt-6">Weekly Activity Schedule</h3>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						@WeekdayActivity("Monday")
 						@WeekdayActivity("Tuesday")

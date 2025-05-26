@@ -46,6 +46,12 @@ func Calculate(c echo.Context) error {
 	activity := calculator.ActivityLevel(c.FormValue("activity"))
 	goal := calculator.Goal(c.FormValue("goal"))
 	advanced := c.FormValue("advanced") == "on"
+	
+	// Get diet type, default to standard if not provided
+	dietType := calculator.DietType(c.FormValue("diet_type"))
+	if dietType == "" {
+		dietType = calculator.Standard
+	}
 
 	if advanced {
 		// Handle weekly calculation
@@ -57,6 +63,7 @@ func Calculate(c echo.Context) error {
 				WeightKG:      weight,
 				ActivityLevel: activity,
 				Goal:          goal,
+				DietType:      dietType,
 			},
 			DailyActivities: make(map[string]calculator.ActivityLevel),
 		}
@@ -81,6 +88,7 @@ func Calculate(c echo.Context) error {
 			WeightKG:      weight,
 			ActivityLevel: activity,
 			Goal:          goal,
+			DietType:      dietType,
 		}
 
 		result := calculator.CalculateDailyMacros(input)
