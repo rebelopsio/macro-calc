@@ -1,5 +1,10 @@
 package templates
 
+import (
+	"fmt"
+	"time"
+)
+
 templ Layout(title string) {
 	<!DOCTYPE html>
 	<html lang="en" class="h-full" x-data="{ 
@@ -32,7 +37,7 @@ templ Layout(title string) {
 			</script>
 		</head>
 		<body class="h-full bg-white dark:bg-gray-900">
-			<div class="min-h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+			<div class="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
 				<nav class="bg-army-green-600 dark:bg-army-green-800">
 					<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 						<div class="flex h-16 items-center justify-between">
@@ -56,9 +61,53 @@ templ Layout(title string) {
 						</div>
 					</div>
 				</nav>
-				<main>
+				<main class="flex-grow">
 					{ children... }
 				</main>
+				
+				<footer class="mt-auto bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+					<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+						<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+							<div>
+								<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">About</h3>
+								<p class="text-sm text-gray-600 dark:text-gray-400">
+									Calculate your daily macronutrients based on the Mifflin-St Jeor equation. 
+									Supports multiple diet types and activity levels for personalized nutrition planning.
+								</p>
+							</div>
+							
+							<div>
+								<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Resources</h3>
+								<ul class="space-y-2 text-sm">
+									<li>
+										<a href="https://github.com/rebelopsio/macro-calc" target="_blank" rel="noopener noreferrer" class="text-gray-600 dark:text-gray-400 hover:text-army-green-600 dark:hover:text-army-green-400 transition-colors">
+											GitHub Repository
+										</a>
+									</li>
+									<li>
+										<a href="https://en.wikipedia.org/wiki/Basal_metabolic_rate#Mifflin-St_Jeor_equation" target="_blank" rel="noopener noreferrer" class="text-gray-600 dark:text-gray-400 hover:text-army-green-600 dark:hover:text-army-green-400 transition-colors">
+											About Mifflin-St Jeor
+										</a>
+									</li>
+								</ul>
+							</div>
+							
+							<div>
+								<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Disclaimer</h3>
+								<p class="text-sm text-gray-600 dark:text-gray-400">
+									This calculator provides estimates for educational purposes only. 
+									Consult with a healthcare professional or registered dietitian for personalized nutrition advice.
+								</p>
+							</div>
+						</div>
+						
+						<div class="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+							<p class="text-center text-sm text-gray-500 dark:text-gray-400">
+								© { fmt.Sprintf("%d", time.Now().Year()) } Macro Calculator. Built with Go, Templ, and Tailwind CSS.
+							</p>
+						</div>
+					</div>
+				</footer>
 			</div>
 		</body>
 	</html>
